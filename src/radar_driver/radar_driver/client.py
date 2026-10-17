@@ -298,6 +298,14 @@ class RadarClient:
         self._check_request()
         if self._running:
             raise RequestRejected("雷达正在运行；请先停止当前操作")
+        if self.status is not None:
+            # running只代表采集是否运行，不代表设备业务是否空闲。
+            # 0/3/4分别为就绪、已停止、结果锁定；其他状态保守拒绝。
+            if self.status.status not in (0, 3, 4):
+                raise RequestRejected("雷达处于忙或未知状态，暂不接受新业务")
+            # 5～7为内部保留模式；未来新增的未知模式也不能自动放行。
+            if self.status.mode not in (0, 1, 2, 3, 4):
+                raise RequestRejected("雷达处于内部或未知模式，暂不接受新业务")
 
     def request_scan_once(self) -> int:
         self._check_idle()
