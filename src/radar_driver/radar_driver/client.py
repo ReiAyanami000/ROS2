@@ -115,6 +115,19 @@ def _parse(frame: Frame):
         _require(all(i < 25 for i in ids) and len(set(ids)) == count, "保存方格编号非法或重复")
         p1 = _pose(*struct.unpack_from("<hhHB", p, 11))
         p2 = _pose(*struct.unpack_from("<hhHB", p, 18))
+
+        if p1.zone != 1 or p2.zone != 2:
+            print(
+                "[PERSISTED DEBUG] "
+                f"length={len(p)}, "
+                f"storage_version={version}, "
+                f"source_zone={source}, "
+                f"zone1_pose={p1}, "
+                f"zone2_pose={p2}, "
+                f"payload={p.hex(' ')}",
+                flush=True,
+            )
+            
         _require(p1.zone == 1 and p2.zone == 2, "两区保存位姿标识不匹配")
         return PersistedState(version, seq, source, bool(valid), p1, p2, ids)
     if kind == Event.CALIBRATION:
