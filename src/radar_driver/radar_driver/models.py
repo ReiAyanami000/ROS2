@@ -147,6 +147,9 @@ class PersistedState:
     zone1_pose: RadarPose
     zone2_pose: RadarPose
     grid_ids: tuple[int, ...]
+    # 文档未定义<hhHB>末尾B的含义，保留原始值，不解释为区域或有效标志。
+    zone1_pose_tail_raw: int = 0
+    zone2_pose_tail_raw: int = 0
 
     @property
     def grid_count(self) -> int:

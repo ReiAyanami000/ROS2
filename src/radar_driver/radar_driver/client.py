@@ -113,23 +113,22 @@ def _parse(frame: Frame):
         _require(count <= 25 and len(p) == 33 + count, "保存方格数量或长度错误")
         ids = tuple(p[33:])
         _require(all(i < 25 for i in ids) and len(set(ids)) == count, "保存方格编号非法或重复")
-        p1 = _pose(*struct.unpack_from("<hhHB", p, 11))
-        p2 = _pose(*struct.unpack_from("<hhHB", p, 18))
-
-        if p1.zone != 1 or p2.zone != 2:
-            print(
-                "[PERSISTED DEBUG] "
-                f"length={len(p)}, "
-                f"storage_version={version}, "
-                f"source_zone={source}, "
-                f"zone1_pose={p1}, "
-                f"zone2_pose={p2}, "
-                f"payload={p.hex(' ')}",
-                flush=True,
-            )
-            
-        _require(p1.zone == 1 and p2.zone == 2, "两区保存位姿标识不匹配")
-        return PersistedState(version, seq, source, bool(valid), p1, p2, ids)
+        x1, y1, heading1, tail1 = struct.unpack_from("<hhHB", p, 11)
+        x2, y2, heading2, tail2 = struct.unpack_from("<hhHB", p, 18)
+        # 区域由记录所在位置确定；末尾字节的业务含义尚未公开。
+        p1 = _pose(x1, y1, heading1, 1)
+        p2 = _pose(x2, y2, heading2, 2)
+        return PersistedState(
+            storage_version=version,
+            record_sequence=seq,
+            source_zone=source,
+            grid_result_valid=bool(valid),
+            zone1_pose=p1,
+            zone2_pose=p2,
+            grid_ids=ids,
+            zone1_pose_tail_raw=tail1,
+            zone2_pose_tail_raw=tail2,
+        )
     if kind == Event.CALIBRATION:
         _require(len(p) == 15, "CALIBRATION长度必须为15")
         zone, x, y, heading, dx, dy, trim, residual, pair_error = struct.unpack("<BhhHhhhBB", p)
