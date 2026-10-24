@@ -325,7 +325,11 @@ class RadarClient:
 
     def request_stop(self) -> int:
         if self._queue_fault:
-            raise RequestRejected("事件队列溢出，请重建客户端")
+            # 队列溢出后只允许恢复停止通道，旧业务和事件全部作废。
+            # 保留接收解码器，以便处理已收到一部分的回复。
+            self._events.clear()
+            self._queue_fault = False
+            self._pending = None
         if self._pending is not None and self._pending.command == Command.STOP:
             raise RequestRejected("STOP尚未完成")
         if self._pending is not None:

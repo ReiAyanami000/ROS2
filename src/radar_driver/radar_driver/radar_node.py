@@ -21,7 +21,7 @@ from rclpy.clock_type import ClockType
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 
-from .client import LinkState, RadarClient
+from .client import LinkState, RadarClient, RequestRejected
 from .serial_transport import SerialTransport, TransportError
 
 
@@ -81,6 +81,8 @@ class RadarNode(Node):
         self._next_open_time = 0.0
         self._open_attempts = 0
         self._closing = False
+        self._stop_deadline = None
+        self._stop_reason = ""
 
         # 避免每次HELLO都重复打印相同信息。
         self._last_hello = None
@@ -193,6 +195,10 @@ class RadarNode(Node):
         if self._closing:
             return
 
+        if self._stop_deadline is not None:
+            self._poll_stop_before_close()
+            return
+
         if not self._transport.is_open:
             self._try_open()
             return
@@ -209,6 +215,11 @@ class RadarNode(Node):
 
             # 2. 推进握手、心跳、健康检查和超时处理。
             client.poll()
+
+            if client.state == LinkState.FAULT:
+                self._start_stop_before_close("客户端进入FAULT")
+                self._poll_stop_before_close()
+                return
 
             # 3. 当前帧写完后才取下一帧。
             #    客户端会优先交出STOP，不能提前批量取帧。
@@ -228,16 +239,10 @@ class RadarNode(Node):
         for event in client.take_events():
             self._handle_event(event)
 
-        # 客户端明确要求重建时，通过关闭再打开清理连接。
-        # 普通协议超时不走这里，由RadarClient自行重新握手。
-        if self._client is client and client.state == LinkState.FAULT:
-            self._handle_transport_failure(
-                "客户端进入FAULT，关闭串口后重新建立连接"
-            )
-
     def _handle_transport_failure(self, reason: str) -> None:
         """清理故障连接并安排重试，不在此处阻塞等待。"""
         self._transport.close()
+        self._stop_deadline = None
 
         if self._client is not None:
             self._client.transport_lost(reason)
@@ -388,15 +393,114 @@ class RadarNode(Node):
             f"message={fault.message}"
         )
 
+    def _start_stop_before_close(self, reason: str) -> None:
+        """暂停普通业务，给STOP及其回复预留最多400 ms。"""
+        if self._stop_deadline is not None:
+            return
+
+        self._stop_reason = reason
+        self._stop_deadline = time.monotonic() + 0.4
+        client = self._client
+
+        if client is None or not self._transport.is_open:
+            self._finish_stop_before_close(False, "串口不可用")
+            return
+
+        # 先消费已有事件，防止旧stopped事件被当成本次停止确认。
+        for event in client.take_events():
+            self._handle_event(event)
+
+        # 已有STOP在途时继续等待，不重复提交。
+        if client.state != LinkState.STOPPING:
+            try:
+                client.request_stop()
+            except RequestRejected as exc:
+                self._finish_stop_before_close(False, str(exc))
+                return
+
+        self.get_logger().info(f"{reason}：正在发送STOP并等待确认")
+
+    def _poll_stop_before_close(self) -> None:
+        """执行一轮停止收发；不再安排HELLO或普通业务。"""
+        if self._stop_deadline is None:
+            return
+        if time.monotonic() >= self._stop_deadline:
+            self._finish_stop_before_close(False, "等待停止确认超时")
+            return
+
+        client = self._client
+        if client is None or not self._transport.is_open:
+            self._finish_stop_before_close(False, "串口不可用")
+            return
+
+        try:
+            # 保持帧完整：已部分发送的旧帧发完后，才取高优先级STOP。
+            if not self._transport.tx_pending:
+                frame = client.take_tx()
+                if frame is not None:
+                    self._transport.enqueue(frame)
+            self._transport.flush_tx()
+
+            data = self._transport.read_available()
+            if data:
+                client.feed(data)
+
+            events = client.take_events()
+            confirmed = any(event.kind == "stopped" for event in events)
+            for event in events:
+                if event.kind in ("fault", "device_error"):
+                    self._handle_event(event)
+
+            if confirmed:
+                self._finish_stop_before_close(True)
+
+        except TransportError as exc:
+            self._finish_stop_before_close(False, str(exc))
+
+    def _finish_stop_before_close(
+        self, confirmed: bool, detail: str = ""
+    ) -> None:
+        """关闭后清空会话；仅运行期故障安排重新连接。"""
+        self._transport.close()
+        self._client = None
+        self._stop_deadline = None
+        self._last_hello = None
+        self._last_status = None
+
+        if confirmed:
+            self.get_logger().info(
+                f"{self._stop_reason}：雷达已确认停止，串口已关闭"
+            )
+        else:
+            self.get_logger().warning(
+                f"{self._stop_reason}：{detail}；"
+                "串口已关闭，但未确认雷达停止"
+            )
+
+        if not self._closing:
+            self._next_open_time = (
+                time.monotonic() + self._reconnect_interval
+            )
+
     def close(self) -> None:
-        """停止轮询并关闭串口，可重复调用。"""
+        """退出时有界等待STOP；不依赖ROS执行器继续运行。"""
         if self._closing:
             return
 
         self._closing = True
         self._timer.cancel()
-        self._transport.close()
-        self._client = None
+        self._start_stop_before_close("节点退出")
+        try:
+            while self._stop_deadline is not None:
+                self._poll_stop_before_close()
+                if self._stop_deadline is not None:
+                    remaining = self._stop_deadline - time.monotonic()
+                    if remaining > 0:
+                        time.sleep(min(0.005, remaining))
+        finally:
+            self._transport.close()
+            self._client = None
+            self._stop_deadline = None
 
 
 def main(args=None) -> None:
