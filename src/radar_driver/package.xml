@@ -8,6 +8,7 @@
   <license>TODO: License declaration</license>
 
   <depend>rclpy</depend>
+  <exec_depend>radar_interfaces</exec_depend>
   <exec_depend>python3-serial</exec_depend>
   <depend>rcl_interfaces</depend>
 

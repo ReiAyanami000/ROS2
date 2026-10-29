@@ -1,0 +1,12 @@
+# Goal：空目标，使用节点已经确认的工作区域
+---
+# Result：操作结束时返回
+bool success
+bool stop_confirmed
+string message
+radar_interfaces/ObstacleArray scan
+---
+# Feedback：扫描过程中的进度
+uint8 frame_count
+uint8 total_frames
+string phase

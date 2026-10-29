@@ -387,7 +387,7 @@ class RadarClient:
                 self._fail("timeout", f"{pending.command.name}等待确认或结果超时")
         if self._probe is not None and now >= self._probe.deadline:
             self._probe = None
-            self._next_hello = now + 0.2
+            self._next_hello = now
 
     def poll(self) -> None:
         if self._queue_fault:
@@ -400,10 +400,15 @@ class RadarClient:
             if self.hello is not None and now >= self._next_heartbeat:
                 self._send(Command.HEARTBEAT)
                 self._next_heartbeat = now + self.HEARTBEAT_PERIOD
-            if self.state != LinkState.STOPPING and self._probe is None and now >= self._next_hello:
+            if (self.state != LinkState.STOPPING
+                    and now >= self._next_hello
+                    and (self._probe is None or self.state == LinkState.WAIT_HELLO)):
                 self._send(Command.HELLO)
-                self._probe = _Transaction(Command.HELLO, now, now + self.ACK_TIMEOUT)
-                self._next_hello = now + self.HELLO_PERIOD
+                # 握手重试属于同一个有界探测窗口，不为每次重发建立并发事务。
+                if self._probe is None:
+                    self._probe = _Transaction(Command.HELLO, now, now + self.ACK_TIMEOUT)
+                period = 0.2 if self.state == LinkState.WAIT_HELLO else self.HELLO_PERIOD
+                self._next_hello = now + period
         except RequestRejected as error:
             self._fail("tx_queue", str(error))
 
@@ -517,6 +522,7 @@ class RadarClient:
         probe = self._probe
         if probe is not None and probe.ack_ok and "hello" in probe.values:
             self._probe = None
+            self._next_hello = self._clock() + self.HELLO_PERIOD
             if self.state == LinkState.WAIT_HELLO:
                 if self._needs_stop:
                     self._begin_stop()

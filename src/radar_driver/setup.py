@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'radar_node = radar_driver.radar_node:main'
+            'radar_node = radar_driver.radar_node:main',
+            'scan_node = radar_driver.scan_node:main',
         ],
     },
 )
