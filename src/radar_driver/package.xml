@@ -7,7 +7,8 @@
   <maintainer email="Hongli20002@outlook.com">rei</maintainer>
   <license>TODO: License declaration</license>
 
-  <depend>rclpy</depend>
+  <depend>rclpy</depend>  
+  <exec_depend>std_srvs</exec_depend>
   <exec_depend>radar_interfaces</exec_depend>
   <exec_depend>python3-serial</exec_depend>
   <depend>rcl_interfaces</depend>

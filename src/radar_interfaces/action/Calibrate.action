@@ -1,0 +1,16 @@
+# 校准当前已确认区域，不允许在此切换区域。
+---
+bool success
+bool stop_confirmed
+string message
+uint8 zone
+float64 x_m
+float64 y_m
+# 设备原生角度约定，未转换为ROS yaw。
+float64 heading_deg
+uint8 residual_mm
+uint8 pair_distance_error_mm
+---
+uint8 frame_count
+uint8 total_frames
+string phase

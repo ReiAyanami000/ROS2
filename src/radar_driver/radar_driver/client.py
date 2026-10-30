@@ -483,7 +483,16 @@ class RadarClient:
                         if value.frame_count > previous:
                             pending.values["progress"] = value.frame_count
                             pending.last_progress = self._clock()
-                        if value.status == 4 and value.frame_count == 14 and not value.running:
+                    # 完整扫描的结束帧可能切换到保持模式(mode=4)。
+                    # 实测1.37结束帧仍可running=True，不能用采集标志否定锁定结果。
+                    # 必须先看到本事务ACK后的扫描进度；这里只记录结束状态，
+                    # _advance仍检查同序号GRID/RESULT、数量、14圈及locked/overflow。
+                    if pending.command == Command.SCAN_LOCKED:
+                        if (value.status == 4
+                                and value.mode in (1, 4)
+                                and value.frame_count == SCAN_FRAME_COUNT
+                                and "progress" in pending.values):
+                            _require(not value.overflow, "扫描结束状态报告容量溢出")
                             pending.values["done"] = True
         elif kind == Event.PERSISTED_STATE:
             if pending is not None and pending.command in (Command.GET_PERSISTED_STATE, Command.CALIBRATE):

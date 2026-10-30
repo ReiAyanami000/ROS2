@@ -18,6 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Obstacle.msg"
   "msg/ObstacleArray.msg"
   "action/ScanOnce.action"
+  "action/Calibrate.action"
   DEPENDENCIES std_msgs action_msgs
 )
 
