@@ -1,3 +1,4 @@
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = 'transport_navigation'
@@ -10,6 +11,10 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
+        ('share/' + package_name + '/config', glob('config/*.yaml')),
+        ('share/' + package_name + '/maps', glob('maps/*')),
+        ('share/' + package_name + '/rviz', glob('rviz/*.rviz')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +30,7 @@ setup(
     entry_points={
         'console_scripts': [
             'map_composer = transport_navigation.map_composer:main',
+            'navigation_manager = transport_navigation.navigation_manager:main',
         ],
     },
 )
