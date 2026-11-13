@@ -1,0 +1,7 @@
+# 1 user cancel, 2 host-detected problem, 3 task termination.
+uint16 reason
+---
+# Submitted to the transport queue; NOT a claim that the robot has stopped.
+bool submitted
+uint32 command_id
+string message

@@ -31,6 +31,8 @@ setup(
         'console_scripts': [
             'map_composer = transport_navigation.map_composer:main',
             'navigation_manager = transport_navigation.navigation_manager:main',
+            'path_processor = transport_navigation.path_processor:main',
+            'path_executor = transport_navigation.path_executor:main',
         ],
     },
 )

@@ -1,0 +1,15 @@
+# Explicit selection: copy a valid /navigation/processed_route route_id.
+string route_id
+---
+bool success
+bool stopped_confirmed
+uint32 completed_segments
+string message
+---
+string route_id
+uint32 segment_index
+uint32 segment_count
+uint32 completed_segments
+string phase
+float64 position_error
+string message

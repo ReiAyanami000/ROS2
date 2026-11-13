@@ -1,0 +1,11 @@
+std_msgs/Header header
+uint64 boot_id
+uint32 session_id
+uint64 uptime_ms
+uint8 base_state
+uint8 active_motion_type
+uint16 status_flags
+uint32 active_command_id
+uint32 fault_flags
+float32 battery_voltage
+uint16 valid_flags

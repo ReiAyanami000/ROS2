@@ -1,0 +1,7 @@
+<library path="transport_orthogonal_planner">
+  <class name="transport_orthogonal_planner::OrthogonalPlanner"
+         type="transport_orthogonal_planner::OrthogonalPlanner"
+         base_class_type="nav2_core::GlobalPlanner">
+    <description>Four-direction, turn-aware A-star with exact orthogonal endpoint connectors.</description>
+  </class>
+</library>

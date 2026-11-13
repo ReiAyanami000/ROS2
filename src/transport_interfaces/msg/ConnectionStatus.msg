@@ -1,0 +1,15 @@
+std_msgs/Header header
+bool port_open
+bool session_bound
+bool ready
+bool motion_locked
+uint64 boot_id
+uint32 session_id
+float64 status_age
+float64 odometry_age
+uint32 parser_errors
+uint32 active_command_id
+uint32 stop_command_id
+string stop_state
+string state
+string message

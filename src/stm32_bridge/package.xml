@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>stm32_bridge</name>
+  <version>0.1.0</version>
+  <description>Framed STM32 serial motion bridge with hardware-free simulator.</description>
+  <maintainer email="Hongli20002@outlook.com">rei</maintainer>
+  <license>Apache-2.0</license>
+  <buildtool_depend>ament_python</buildtool_depend>
+  <depend>rclpy</depend>
+  <depend>transport_interfaces</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>action_msgs</depend>
+  <exec_depend>python3-serial</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <test_depend>python3-pytest</test_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

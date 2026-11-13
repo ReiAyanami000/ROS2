@@ -1,0 +1,33 @@
+# Distances in metres, angles in radians; target_yaw is in odom.
+uint8 ROTATE_TO=1
+uint8 MOVE_DISTANCE=2
+uint8 motion_type
+float64 target_yaw
+float64 target_distance
+float64 max_linear_velocity
+float64 linear_acceleration
+float64 max_angular_velocity
+float64 angular_acceleration
+float64 distance_tolerance
+float64 yaw_tolerance
+uint32 timeout_ms
+---
+bool success
+bool stopped_confirmed
+uint32 command_id
+# Bridge error namespace: 0 none, 1 connection, 2 timeout, 3 protocol,
+# 4 stop_unconfirmed, 5 stale_data, 6 external_stop, 7 request_rejected.
+uint16 bridge_error
+uint16 stm32_error
+string message
+---
+uint32 command_id
+uint8 motion_state
+uint16 valid_flags
+uint32 elapsed_ms
+float64 traveled_distance
+float64 remaining_distance
+float64 current_yaw
+float64 yaw_error
+float64 linear_velocity
+float64 angular_velocity

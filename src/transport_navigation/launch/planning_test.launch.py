@@ -10,6 +10,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
 from nav2_common.launch import RewrittenYaml
+from launch.conditions import IfCondition
 
 
 def launch_nodes(context):
@@ -35,7 +36,7 @@ def launch_nodes(context):
     return [
         Node(
             package='tf2_ros', executable='static_transform_publisher',
-            name='planning_test_static_tf', output='screen',
+            name='planning_test_static_tf', output='screen',condition=IfCondition(LaunchConfiguration('publish_static_tf')),
             arguments=[
                 '--x', str(values['start_x']), '--y', str(values['start_y']),
                 '--z', '0', '--yaw', str(values['start_yaw']),
@@ -74,4 +75,5 @@ def generate_launch_description():
         DeclareLaunchArgument('inflation_extra', default_value='0.15',
                               description='车体半径之外的软代价范围，米'),
         OpaqueFunction(function=launch_nodes),
+        DeclareLaunchArgument('publish_static_tf', default_value='true'),
     ])

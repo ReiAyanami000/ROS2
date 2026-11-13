@@ -19,6 +19,8 @@
   <depend>launch</depend>
   <depend>launch_ros</depend>
   <depend>ament_index_python</depend>
+  <depend>transport_interfaces</depend>
+  <depend>visualization_msgs</depend>
 
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>action_msgs</exec_depend>
@@ -30,6 +32,7 @@
   <exec_depend>nav2_common</exec_depend>
   <exec_depend>nav2_map_server</exec_depend>
   <exec_depend>rviz2</exec_depend>
+  <exec_depend>transport_orthogonal_planner</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

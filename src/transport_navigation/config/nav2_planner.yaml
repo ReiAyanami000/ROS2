@@ -5,14 +5,12 @@ planner_server:
     expected_planner_frequency: 1.0
     planner_plugins: [GridBased]
     GridBased:
-      plugin: nav2_smac_planner::SmacPlanner2D
-      tolerance: 0.0
-      downsample_costmap: false
-      allow_unknown: false
-      max_iterations: 1000000
+      plugin: transport_orthogonal_planner::OrthogonalPlanner
+      turn_penalty: 0.10
+      cost_weight: 2.0
       max_planning_time: 3.0
-      cost_travel_multiplier: 2.0
-      use_final_approach_orientation: false
+      max_expansions: 1000000
+      max_states: 2000000
 
 global_costmap:
   global_costmap:
