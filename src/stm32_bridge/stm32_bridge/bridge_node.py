@@ -27,10 +27,10 @@ class BridgeNode(Node):
         defaults = {
             'serial_port': '/dev/ttyUSB0', 'baudrate': 115200,
             'heartbeat_period': 0.1, 'status_timeout': 0.6, 'odom_timeout': 0.3,
-            'ack_timeout': 0.25, 'max_retries': 2, 'query_period': 0.4, 'stop_timeout': 2.0,
+            'ack_timeout': 0.25, 'max_retries': 2, 'query_period': 0.4, 'stop_timeout': 4.0,
             'odom_frame': 'odom', 'base_frame': 'base_link', 'publish_tf': True,
-            'max_distance': 10.0, 'max_speed': 0.5, 'max_acceleration': 1.0,
-            'max_angular_speed': 1.5, 'max_angular_acceleration': 3.0, 'max_timeout_ms': 120000,
+            'max_distance': 1.5707964, 'max_speed': 0.20, 'max_acceleration': 0.20,
+            'max_angular_speed': 1.5, 'max_angular_acceleration': 1.3962634, 'max_timeout_ms': 120000,
             'pose_variance': [0.01, 0.01, 1000.0, 1000.0, 1000.0, 0.02],
             'twist_variance': [0.01, 1000.0, 1000.0, 1000.0, 1000.0, 0.02],
         }

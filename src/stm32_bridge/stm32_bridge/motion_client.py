@@ -5,6 +5,8 @@ import math
 from .protocol import Frame, Kind, Motion, State, payload, wrap
 from .session_manager import Session
 
+STOPPED_ANGULAR_SPEED = math.radians(2.0)
+STOPPED_LINEAR_SPEED = 0.015
 
 @dataclass
 class Pending:
@@ -24,7 +26,7 @@ class Pending:
 class MotionClient:
     def __init__(self, sender, *, heartbeat_period=0.1, status_timeout=0.6,
                  odom_timeout=0.3, ack_timeout=0.25, max_retries=2,
-                 query_period=0.4, stop_timeout=2.0, limits=None):
+                 query_period=0.4, stop_timeout=4.0, limits=None):
         self.sender = sender
         self.heartbeat_period = heartbeat_period
         self.status_timeout, self.odom_timeout = status_timeout, odom_timeout
@@ -91,7 +93,7 @@ class MotionClient:
                 and self.session.odom_time >= after
                 and self.status[1] == 0 and self.status[4] == 0
                 and self.status[5] == 0 and (self.status[3] & 0x1e) == 0x1c
-                and abs(self.odom[6]) <= 0.015 and abs(self.odom[7]) <= 0.03)
+                and abs(self.odom[6]) <= STOPPED_LINEAR_SPEED and abs(self.odom[7]) <= STOPPED_ANGULAR_SPEED)
 
     def ready(self, now):
         return not self.locked and self.motion is None and self.stop is None and self.idle(now)
@@ -239,7 +241,7 @@ class MotionClient:
         if v is None or v[1] != State.SUCCEEDED or v[2] != 0:
             return False
         mask = 4 if p.kind == Kind.STOP else (6 if p.kind == 1 else 7)
-        if (v[3] & mask) != mask or abs(v[12]) > 0.015 or abs(v[13]) > 0.03:
+        if (v[3] & mask) != mask or abs(v[12]) > STOPPED_LINEAR_SPEED or abs(v[13]) > STOPPED_ANGULAR_SPEED:
             return False
         if p.kind == Kind.STOP:
             return True

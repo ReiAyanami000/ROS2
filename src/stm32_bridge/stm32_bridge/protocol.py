@@ -111,36 +111,79 @@ class Motion:
     timeout_ms: int = 30000
 
     def validate(self, limits=None):
-        caps = {'distance': 10.0, 'speed': 0.5, 'acceleration': 1.0,
-                'angular_speed': 1.5, 'angular_acceleration': 3.0,
-                'timeout_ms': 120000}
-        if limits:
-            caps.update(limits)
+        # 与当前 STM32 固件一致的硬上限。
+        hard_caps = {
+            'distance': 5.0,
+            'speed': 0.20,
+            'acceleration': 0.20,
+            'angular_speed': 1.5707964,
+            'angular_acceleration': 1.3962634,
+            'timeout_ms': 120000,
+        }
+
+        caps = hard_caps.copy()
+
+        # YAML 可以进一步收紧限制，但不能放宽固件上限。
+        for name, value in (limits or {}).items():
+            if name in caps:
+                if not math.isfinite(value) or value <= 0:
+                    raise ValueError(f'invalid limit: {name}')
+                caps[name] = min(value, hard_caps[name])
+
         if self.kind not in (Kind.ROTATE_TO, Kind.MOVE_DISTANCE):
             raise ValueError('unsupported motion type')
-        for name in ('yaw', 'distance', 'speed', 'acceleration', 'angular_speed',
-                     'angular_acceleration', 'distance_tolerance', 'yaw_tolerance'):
+
+        for name in (
+            'yaw', 'distance', 'speed', 'acceleration',
+            'angular_speed', 'angular_acceleration',
+            'distance_tolerance', 'yaw_tolerance'
+        ):
             if not math.isfinite(getattr(self, name)):
                 raise ValueError(f'{name} must be finite')
-        if not 0 < self.timeout_ms <= caps['timeout_ms']:
-            raise ValueError('timeout outside configured limits')
-        if not 0 < self.yaw_tolerance <= 0.2:
-            raise ValueError('yaw tolerance must be in (0, 0.2] rad')
-        names = ('angular_speed', 'angular_acceleration') if self.kind == 1 else (
-            'distance', 'speed', 'acceleration')
-        for name in names:
-            if not 0 < getattr(self, name) <= caps[name]:
-                raise ValueError(f'{name} outside configured limits')
-        if self.kind == 2 and not 0 < self.distance_tolerance <= min(0.05, self.distance):
-            raise ValueError('distance tolerance outside allowed range')
-        # Verify float32 conversion, including nonzero tiny tolerances/speeds.
-        data = self.encode()
-        values = FORMATS[self.kind].unpack(data)
-        if not all(math.isfinite(v) for v in values):
-            raise ValueError('float32 overflow')
-        positive_indices = (1, 2, 3) if self.kind == 1 else (0, 2, 3, 4, 5)
-        if any(values[i] <= 0 for i in positive_indices):
-            raise ValueError('float32 underflow')
+
+        if (
+            not isinstance(self.timeout_ms, int)
+            or not 100 <= self.timeout_ms <= caps['timeout_ms']
+        ):
+            raise ValueError('timeout outside firmware limits')
+
+        # 按实际发送的 float32 数值检查，避免 Python 双精度边界差异。
+        def f32(value):
+            return struct.unpack('<f', struct.pack('<f', value))[0]
+
+        def check(name, value, low, high):
+            if not f32(low) <= value <= f32(high):
+                raise ValueError(f'{name} outside firmware limits')
+
+        values = FORMATS[self.kind].unpack(self.encode())
+
+        if not all(math.isfinite(value) for value in values):
+            raise ValueError('non-finite wire value')
+
+        if self.kind == Kind.ROTATE_TO:
+            yaw, speed, acceleration, yaw_tol, timeout = values
+
+            check('angular_speed', speed, 0.08726646,
+                caps['angular_speed'])
+            check('angular_acceleration', acceleration, 0.08726646,
+                caps['angular_acceleration'])
+            check('yaw_tolerance', yaw_tol, 0.008726646, 0.08726647)
+
+        else:
+            distance, yaw, speed, acceleration, distance_tol, yaw_tol, timeout = values
+
+            check('distance', distance, 0.02, caps['distance'])
+            check('speed', speed, 0.03, caps['speed'])
+            check('acceleration', acceleration, 0.03,
+                caps['acceleration'])
+            check('distance_tolerance', distance_tol, 0.005, 0.05)
+            check('yaw_tolerance', yaw_tol, 0.008726646, 0.08726647)
+
+            if distance_tol >= distance:
+                raise ValueError('distance tolerance must be smaller than distance')
+
+        if not -f32(math.pi) <= yaw < f32(math.pi):
+            raise ValueError('wire yaw outside [-pi, pi)')
 
     def encode(self):
         if self.kind == Kind.ROTATE_TO:

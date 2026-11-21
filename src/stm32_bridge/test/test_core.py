@@ -171,21 +171,44 @@ class LifecycleTests(unittest.TestCase):
         h = Harness()
         h.move(1)
         h.pump(0.3)
+
+        # 屏蔽动作状态，无法确认 STOP 及原动作的最终结果。
         h.filter = lambda f: f.kind != Kind.MOTION_STATE
         h.engine.request_stop(h.now, cancel=True)
-        h.pump(3)
-        self.assertEqual(h.engine.outcomes[-1]['outcome'], 'failed')
-        self.assertFalse(h.engine.outcomes[-1]['stopped_confirmed'])
+
+        h.pump(h.engine.stop_timeout + 1.0)
+
+        self.assertTrue(h.engine.outcomes, "超时后没有产生动作结果")
+        self.assertEqual(
+            h.engine.outcomes[-1]['outcome'], 'failed'
+        )
+        self.assertFalse(
+            h.engine.outcomes[-1]['stopped_confirmed']
+        )
         self.assertTrue(h.engine.locked)
 
     def test_stale_odom_requests_stop(self):
         h = Harness()
         h.move(1)
         h.pump(0.3)
+
+        # 模拟后续里程计全部丢失。
         h.filter = lambda f: f.kind != Kind.ODOMETRY
-        h.pump(3)
-        self.assertTrue(any(f.kind == Kind.STOP for f in h.history))
-        self.assertEqual(h.engine.outcomes[-1]['outcome'], 'failed')
+
+        # 先等待里程计过期触发 STOP，再等待停止确认超时。
+        h.pump(
+            h.engine.odom_timeout
+            + h.engine.stop_timeout
+            + 1.0
+        )
+
+        self.assertTrue(
+            any(f.kind == Kind.STOP for f in h.history)
+        )
+        self.assertTrue(h.engine.outcomes, "超时后没有产生动作结果")
+        self.assertEqual(
+            h.engine.outcomes[-1]['outcome'], 'failed'
+        )
 
     def test_reboot_invalidates_task(self):
         h = Harness()
@@ -291,12 +314,30 @@ class LifecycleTests(unittest.TestCase):
         h = Harness()
         h.move(1)
         h.pump(0.1)
+
         h.filter = lambda f: f.kind != Kind.MOTION_STATE
         h.engine.request_stop(h.now, cancel=True)
-        h.pump(2.2)
-        count = len([f for f in h.history if f.kind == Kind.HEARTBEAT])
+
+        # 必须越过当前配置的停止确认时限。
+        h.pump(h.engine.stop_timeout + 0.2)
+
+        self.assertEqual(h.engine.stop_state, 'UNCONFIRMED')
+        self.assertTrue(h.engine.locked)
+
+        count = len([
+            f for f in h.history
+            if f.kind == Kind.HEARTBEAT
+        ])
+
         h.pump(0.3)
-        self.assertEqual(count, len([f for f in h.history if f.kind == Kind.HEARTBEAT]))
+
+        self.assertEqual(
+            count,
+            len([
+                f for f in h.history
+                if f.kind == Kind.HEARTBEAT
+            ])
+        )
 
     def test_terminal_waits_for_fresh_stopped_status(self):
         h = Harness()

@@ -31,7 +31,7 @@ class PathExecutor(Node):
                         position_tolerance=0.03, yaw_tolerance=0.03,
                         distance_tolerance=0.005, linear_speed=0.15, linear_acceleration=0.2,
                         angular_speed=0.5, angular_acceleration=0.5,
-                        feedback_timeout=0.6, response_timeout=3.0, stop_timeout=4.0,
+                        feedback_timeout=0.6, response_timeout=3.0, stop_timeout=5.0,
                         route_timeout=600.0, max_segment_length=10.0)
         for name, value in defaults.items():
             self.declare_parameter(name, value)
